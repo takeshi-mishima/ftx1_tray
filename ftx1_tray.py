@@ -1,5 +1,5 @@
 #
-# ftx1_tray.py : FTX-1 tray tool (VS swap + 145/433 FM QSY)
+# ftx1_tray.py : FTX-1 tray tool (VS swap + 145/433 FM QSY)  Ver.1.0
 #
 # Functions:
 #   SWAP : swap operating band MAIN <-> SUB
@@ -30,6 +30,8 @@ from ftx1common import (
 # ------------------------------------------------------------
 # Constants
 # ------------------------------------------------------------
+
+VERSION = '1.0'
 
 FREQ_145 = 145_000_000
 FREQ_433 = 433_000_000
@@ -143,6 +145,7 @@ def save_settings(cfg, funcs):
 
 class Ftx1Tray(TrayApp):
     APP_NAME = 'FTX-1 トレイ'
+    MENU_TITLE = f'FTX-1 トレイ Ver.{VERSION}'
 
     def __init__(self):
         super().__init__()

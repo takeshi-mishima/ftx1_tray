@@ -394,7 +394,8 @@ class TrayApp:
 
     def show_menu(self):
         menu = user32.CreatePopupMenu()
-        user32.AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, self.APP_NAME)
+        title = getattr(self, 'MENU_TITLE', self.APP_NAME)
+        user32.AppendMenuW(menu, MF_STRING | MF_GRAYED, 0, title)
         user32.AppendMenuW(menu, MF_SEPARATOR, 0, None)
         for item in self.menu_items():
             if item is None:
