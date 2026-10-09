@@ -1,12 +1,15 @@
 #
-# ftx1_tray.py : FTX-1 tray tool (VS swap + 145/433 FM QSY)  Ver.1.0
+# ftx1_tray.py : FTX-1 tray tool (VS swap + 145/433 FM QSY)  Ver.1.1
 #
 # Functions:
 #   SWAP : swap operating band MAIN <-> SUB
+#   VFO  : put the operating band into VFO mode (from memory channel etc.)
 #   M145 : MAIN 145.000 FM, operating band = MAIN
 #   M433 : MAIN 433.000 FM, operating band = MAIN
 #   S145 : SUB  145.000 FM, operating band = SUB
 #   S433 : SUB  433.000 FM, operating band = SUB
+#   (M/S145, M/S433 also put that side into VFO mode before setting the
+#    frequency: the FTX-1 rejects frequency set in memory channel mode.)
 #
 # Each function is assigned to <BUTTON> <OPE> in the settings dialog
 # (menu -> 設定...) and saved in ftx1_tools.ini.
@@ -21,7 +24,7 @@
 
 from ftx1common import (
     TrayApp, INI_PATH, read_ini, make_icon, rgb, rigctld, normalize_vfo,
-    RigctldError, key_down, double_click_ms, VK_SHIFT, VK_CONTROL,
+    ensure_vfo, RigctldError, key_down, double_click_ms, VK_SHIFT, VK_CONTROL,
     WM_LBUTTONDOWN, WM_LBUTTONUP, WM_LBUTTONDBLCLK,
     WM_RBUTTONDOWN, WM_RBUTTONUP, WM_RBUTTONDBLCLK,
     WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MBUTTONDBLCLK,
@@ -31,13 +34,13 @@ from ftx1common import (
 # Constants
 # ------------------------------------------------------------
 
-VERSION = '1.0'
+VERSION = '1.1'
 
 FREQ_145 = 145_000_000
 FREQ_433 = 433_000_000
 MODE = 'FM'
 
-FUNCS = ['SWAP', 'M145', 'M433', 'S145', 'S433']
+FUNCS = ['SWAP', 'VFO', 'M145', 'M433', 'S145', 'S433']
 BUTTONS = ['L', 'C', 'R']
 NONE_LABEL = '-'
 OPS = ['SGL', 'DBL', 'TPL', 'CTL']
@@ -50,6 +53,7 @@ OPS_REMOVED = ('LNG', 'LONG')
 
 DEFAULT_FUNCS = {
     'SWAP': ('C', 'SGL'),
+    'VFO': (None, 'SGL'),           # unassigned by default
     'M145': ('R', 'SGL'),
     'M433': ('R', 'DBL'),
     'S145': ('L', 'SGL'),
@@ -170,9 +174,9 @@ class Ftx1Tray(TrayApp):
                 self.maxc[b] = 1
 
     def _assign_text(self):
-        # one line per group: SWAP / M145 M433 / S145 S433
+        # one line per group: SWAP VFO / M145 M433 / S145 S433
         lines = []
-        for group in (['SWAP'], ['M145', 'M433'], ['S145', 'S433']):
+        for group in (['SWAP', 'VFO'], ['M145', 'M433'], ['S145', 'S433']):
             parts = [f'{f}={self.funcs[f][0]}-{self.funcs[f][1]}'
                      for f in group if self.funcs[f][0] is not None]
             if parts:
@@ -277,11 +281,20 @@ class Ftx1Tray(TrayApp):
             replies = rigctld(self.cfg, [f'V {target}', 'v'])
             self.state = normalize_vfo(replies[-1])
             self.last = f'SWAP → {self.state}'
+        elif func == 'VFO':
+            side = normalize_vfo(rigctld(self.cfg, ['v'])[0])
+            self.state = side
+            if ensure_vfo(self.cfg, side):
+                self.last = f'{side} → VFO'
+            else:
+                self.last = f'{side} VFO（変更なし）'
         else:
             side = 'Main' if func[0] == 'M' else 'Sub'
             freq = FREQ_145 if func.endswith('145') else FREQ_433
-            # V (band) -> F (frequency) -> M (mode)
-            rigctld(self.cfg, [f'V {side}', f'F {freq}', f'M {MODE} 0'])
+            # V (band) -> VFO mode -> F (frequency) -> M (mode)
+            rigctld(self.cfg, [f'V {side}'])
+            ensure_vfo(self.cfg, side.upper())
+            rigctld(self.cfg, [f'F {freq}', f'M {MODE} 0'])
             self.state = side.upper()
             self.last = f'{self.state} {freq / 1e6:.3f} {MODE}'
         self.update_icon()

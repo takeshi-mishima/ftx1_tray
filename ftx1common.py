@@ -42,7 +42,7 @@ class Config:
         cp = read_ini()
         self.host = cp.get('rigctld', 'host', fallback='127.0.0.1')
         self.port = cp.getint('rigctld', 'port', fallback=4534)
-        self.timeout = cp.getfloat('rigctld', 'timeout', fallback=3.0)
+        self.timeout = cp.getfloat('rigctld', 'timeout', fallback=6.0)
 
 
 # ============================================================
@@ -81,6 +81,62 @@ def rigctld(cfg, commands):
     except OSError as e:
         raise RigctldError(f'rigctld ({cfg.host}:{cfg.port}) に接続できません: {e}')
     return replies
+
+
+def rig_raw(cfg, cat):
+    """
+    Send a raw CAT string via rigctld 'send_raw' with ';' as the reply
+    terminator, and return the reply (e.g. 'VM011;').
+    Uses the extended response ('+' prefix), whose reply is:
+        send_raw: ; <cat>
+        Send raw answer: <reply>
+        RPRT 0
+    ('w' is not used: it keeps reading until a ~4 s timeout.)
+    """
+    answer = None
+    try:
+        with socket.create_connection((cfg.host, cfg.port), timeout=cfg.timeout) as s:
+            f = s.makefile('rw', encoding='ascii', newline='\n')
+            f.write(f'+\\send_raw ; {cat}\n')
+            f.flush()
+            while True:
+                line = f.readline()
+                if not line:
+                    raise RigctldError(f'{cat}: rigctldが応答せずに切断しました')
+                line = line.strip()
+                if line.startswith('Send raw answer:'):
+                    answer = line.split(':', 1)[1].strip()
+                elif line.startswith('RPRT'):
+                    parts = line.split()
+                    if len(parts) < 2 or parts[1] != '0':
+                        raise RigctldError(f'{cat}: {line}')
+                    break
+    except socket.timeout:
+        raise RigctldError(f'rigctldの応答がタイムアウトしました（{cfg.timeout}秒）')
+    except OSError as e:
+        raise RigctldError(f'rigctld ({cfg.host}:{cfg.port}) に接続できません: {e}')
+    if not answer:
+        raise RigctldError(f'{cat}: 無線機からの応答がありません')
+    return answer
+
+
+def ensure_vfo(cfg, side):
+    """
+    Put MAIN or SUB ('MAIN' / 'SUB') into VFO mode if it is in memory
+    channel, memory tune, PMS, etc. The FTX-1 rejects FA/FB (frequency set)
+    with '?;' while not in VFO mode, but rigctld still returns RPRT 0.
+    CAT VM: P1 0=MAIN 1=SUB, P2 00=VFO 10=MEM TUNE 11=MEM CH 20/21=PMS 91=EMG
+    Returns True if switched, False if it was already VFO.
+    """
+    p1 = '0' if side == 'MAIN' else '1'
+    vfo = f'VM{p1}00;'
+    if rig_raw(cfg, f'VM{p1};') == vfo:
+        return False
+    # set (no reply) + read back in one exchange
+    reply = rig_raw(cfg, f'VM{p1}00;VM{p1};')
+    if reply != vfo:
+        raise RigctldError(f'{side} をVFOモードにできません（応答: {reply}）')
+    return True
 
 
 def normalize_vfo(reply):
