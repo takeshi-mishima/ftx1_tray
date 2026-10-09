@@ -1,5 +1,5 @@
 #
-# ftx1_tray.py : FTX-1 tray tool (VS swap + 145/433 FM QSY + FUNC knob)  Ver.1.2
+# ftx1_tray.py : FTX-1 tray tool (VS swap + 145/433 FM QSY + FUNC knob)  Ver.2.0
 #
 # Functions:
 #   SWAP : swap operating band MAIN <-> SUB
@@ -41,7 +41,7 @@ from ftx1common import (
 # Constants
 # ------------------------------------------------------------
 
-VERSION = '1.2'
+VERSION = '2.0'
 
 FREQ_145 = 145_000_000
 FREQ_433 = 433_000_000
