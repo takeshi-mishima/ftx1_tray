@@ -6,3 +6,5 @@ dist/
 # Python のキャッシュ
 __pycache__/
 *.pyc
+ftx1_tray_v*/
+*.zip
