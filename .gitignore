@@ -1,0 +1,8 @@
+# PyInstaller のビルド生成物
+build/
+dist/
+*.spec
+
+# Python のキャッシュ
+__pycache__/
+*.pyc
