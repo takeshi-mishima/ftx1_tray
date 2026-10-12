@@ -1,5 +1,5 @@
 #
-# ftx1_tray.py : FTX-1 tray tool (VS swap + 145/433 FM QSY + FUNC knob)  Ver.2.0
+# ftx1_tray.py : FTX-1 tray tool (VS swap + 145/433 FM QSY + FUNC knob)  Ver.2.1
 #
 # Functions:
 #   SWAP : swap operating band MAIN <-> SUB
@@ -41,7 +41,7 @@ from ftx1common import (
 # Constants
 # ------------------------------------------------------------
 
-VERSION = '2.0'
+VERSION = '2.1'
 
 FREQ_145 = 145_000_000
 FREQ_433 = 433_000_000
@@ -96,8 +96,7 @@ MENU_SETTINGS = 1
 MENU_EXIT = 2
 
 # Icon colors
-MAIN_ON = rgb(0x1E, 0x5A, 0xC8)      # blue
-SUB_ON = rgb(0x1E, 0x8C, 0x3C)       # green
+ON_BG = rgb(0xD0, 0x18, 0x18)        # operating band: red (ON AIR style)
 OFF_BG = rgb(0x48, 0x48, 0x48)
 OFF_FG = rgb(0xA0, 0xA0, 0xA0)
 WHITE = rgb(0xFF, 0xFF, 0xFF)
@@ -238,8 +237,8 @@ class Ftx1Tray(TrayApp):
         s_on = self.state == 'SUB'
         m_on = self.state == 'MAIN'
         icon = make_icon([
-            ('S', SUB_ON if s_on else OFF_BG, WHITE if s_on else OFF_FG),
-            ('M', MAIN_ON if m_on else OFF_BG, WHITE if m_on else OFF_FG),
+            ('S', ON_BG if s_on else OFF_BG, WHITE if s_on else OFF_FG),
+            ('M', ON_BG if m_on else OFF_BG, WHITE if m_on else OFF_FG),
         ], font_ratio=0.65)
         tip = f'FTX-1 操作バンド: {self.state or "不明"}\n{self._assign_text()}'
         if self.last:
